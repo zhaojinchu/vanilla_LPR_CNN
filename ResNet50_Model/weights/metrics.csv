@@ -1,1 +1,0 @@
-epoch,train_loss,val_loss,IoU,mAP,precision,recall,F1_score,FPS
