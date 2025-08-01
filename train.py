@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from utils.data import LicensePlateIterableDataset, compute_iou, calculate_metrics
-from models import resnet18, resnet50, mobilenetv3, efficientnetb0
+from models import resnet18, resnet50, mobilenetv3, efficientnetb0, custom_cnn
 
 
 MODEL_MAP = {
@@ -19,6 +19,7 @@ MODEL_MAP = {
     "resnet50": resnet50.build_model,
     "mobilenetv3": mobilenetv3.build_model,
     "efficientnetb0": efficientnetb0.build_model,
+    "custom_cnn": custom_cnn.build_model,
 }
 
 def parse_args():
@@ -45,9 +46,18 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=128, num_workers=min(os.cpu_count(), 64), pin_memory=True, persistent_workers=True)
 
     model = MODEL_MAP[args.model](pretrained=True).to(device)
-    
+
     if device.type == "cuda" and hasattr(torch, "compile"):
         model = torch.compile(model)
+
+    param_count = sum(p.numel() for p in model.parameters())
+
+    def get_model_size(m):
+        total_bytes = sum(p.nelement() * p.element_size() for p in m.parameters())
+        return total_bytes / (1024 ** 2)
+
+    model_size_mb = get_model_size(model)
+    print(f"Model params: {param_count:,}, size: {model_size_mb:.2f} MB")
         
     criterion = nn.SmoothL1Loss()
     optimizer = optim.Adam(model.parameters(), lr=2e-4, weight_decay=1e-5)
@@ -83,7 +93,19 @@ def main():
     if not os.path.exists(log_file):
         with open(log_file, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["epoch", "train_loss", "val_loss", "IoU", "mAP", "precision", "recall", "F1_score", "FPS"])
+            writer.writerow([
+                "epoch",
+                "train_loss",
+                "val_loss",
+                "IoU",
+                "mAP",
+                "precision",
+                "recall",
+                "F1_score",
+                "FPS",
+                "params",
+                "model_size_mb",
+            ])
     else:
         df = csv.reader(open(log_file))
         rows = list(df)
@@ -159,6 +181,8 @@ def main():
                 recall,
                 f1_score,
                 fps,
+                param_count,
+                model_size_mb,
             ])
 
         if val_loss < best_val_loss:

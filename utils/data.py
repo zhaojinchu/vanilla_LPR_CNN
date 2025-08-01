@@ -38,7 +38,16 @@ class LicensePlateIterableDataset(IterableDataset):
     def __init__(self, root_dir, annotation_file, transform=None, chunk_size=1024):
         self.root_dir = os.path.join(root_dir, "combined_dataset/preletterboxed")
         self.annotation_file = annotation_file
-        self.transform = transform if transform else transforms.ToTensor()
+        if transform is None:
+            self.transform = transforms.Compose(
+                [
+                    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                ]
+            )
+        else:
+            self.transform = transform
         self.chunk_size = chunk_size
 
     def __iter__(self):
