@@ -6,7 +6,7 @@ import csv
 import time
 import torch
 import torch.nn as nn
-import torch.optim as optim
+import torch.optim as optimgi
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -20,7 +20,6 @@ MODEL_MAP = {
     "mobilenetv3": mobilenetv3.build_model,
     "efficientnetb0": efficientnetb0.build_model,
 }
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train license plate detector")
@@ -42,14 +41,17 @@ def main():
         os.path.join(args.data_dir, "combined_dataset/val_annotations.csv"),
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=8, num_workers=min(os.cpu_count(), 32), pin_memory=True, persistent_workers=True)
-    val_loader = DataLoader(val_dataset, batch_size=8, num_workers=min(os.cpu_count(), 32), pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=128, num_workers=min(os.cpu_count(), 64), pin_memory=True, persistent_workers=True)
+    val_loader = DataLoader(val_dataset, batch_size=128, num_workers=min(os.cpu_count(), 64), pin_memory=True, persistent_workers=True)
 
     model = MODEL_MAP[args.model](pretrained=True).to(device)
-
+    
+    if device.type == "cuda" and hasattr(torch, "compile"):
+        model = torch.compile(model)
+        
     criterion = nn.SmoothL1Loss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10, eta_min=1e-6)
+    optimizer = optim.Adam(model.parameters(), lr=2e-4, weight_decay=1e-5)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=25, eta_min=1e-6)
 
     num_epochs = 10
     save_dir = os.path.join("weights", args.model)
