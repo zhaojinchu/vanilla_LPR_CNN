@@ -32,7 +32,12 @@ def parse_args():
 def main():
     args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    
+    if torch.cuda.is_available():
+        print("Cuda in use")
+    else:
+        print("CPU in use")
+        
     train_dataset = LicensePlateIterableDataset(
         args.data_dir,
         os.path.join(args.data_dir, "combined_dataset/train_annotations.csv"),
