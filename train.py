@@ -47,8 +47,8 @@ def main():
         os.path.join(args.data_dir, "combined_dataset/val_annotations.csv"),
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=128, num_workers=min(os.cpu_count(), 64), pin_memory=True, persistent_workers=True)
-    val_loader = DataLoader(val_dataset, batch_size=128, num_workers=min(os.cpu_count(), 64), pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=1, num_workers=10, pin_memory=True, persistent_workers=False)
+    val_loader = DataLoader(val_dataset, batch_size=1, num_workers=10, pin_memory=True, persistent_workers=False)
 
     model = MODEL_MAP[args.model](pretrained=True).to(device)
 
